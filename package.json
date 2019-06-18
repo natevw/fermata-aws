@@ -1,0 +1,27 @@
+{
+  "name": "fermata-aws",
+  "version": "1.0.0-alpha",
+  "description": "AWS plugin for Fermata",
+  "main": "fermata-aws.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/natevw/fermata-aws.git"
+  },
+  "keywords": [
+    "aws",
+    "amazon web services",
+    "fermata"
+  ],
+  "author": "Nathan Vander Wilt",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/natevw/fermata-aws/issues"
+  },
+  "homepage": "https://github.com/natevw/fermata-aws",
+  "peerDependencies": {
+    "fermata": "^0.11.0-beta4"
+  }
+}
