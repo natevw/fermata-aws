@@ -53,13 +53,13 @@ var aws = function (transport, TODO) {
 
 aws.signRequest = function (req) {
     var algorithm = 'AWS4-HMAC-SHA256',
-        timestamp = amzTimestamp(),     // "20150830T123600Z"
+        timestamp = req.headers['X-Amz-Date'] || amzTimestamp(),
         // TODO: determine these!!
         apiKeyId = "AKIDEXAMPLE",
         apiKey = "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
         region = "us-east-1",
-        service = "iam",
-        host = "iam.amazonaws.com";
+        service = "service",
+        host = req.headers['Host'] || "iam.amazonaws.com";
     
     req.headers['Host'] = host;
     req.headers['X-Amz-Date'] = timestamp;
