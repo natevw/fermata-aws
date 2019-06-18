@@ -8,13 +8,21 @@ let fs = require('fs'),
 
 function parseRequest(reqData) {
    let reqLines = reqData.split('\n'),
-      [method, reqPath, _vers] = reqLines[0].split(' '),
+      [method, ..._reqPath] = reqLines[0].split(' '),
+      _vers = _reqPath.pop(),
+      reqPath = _reqPath.join(' '),
       bodyIdx = reqLines.indexOf(''),
       headerLines = (~bodyIdx) ? reqLines.slice(1, bodyIdx) : reqLines.slice(1),
       data = (~bodyIdx) ? reqLines.slice(bodyIdx+1).join('\n') : null;
   
   function extractPath(pathname) {
-    return pathname.split('/').map(decodeURIComponent);
+    let path = [''];
+    pathname.split('/').map(decodeURIComponent).forEach(function (part) {
+      if (part === '.') return;
+      else if (part === '..') path.pop();
+      else if (part || path[path.length-1]) path.push(part);
+    });
+    return path;
   }
   
   function extractQuery(params) {
@@ -52,8 +60,9 @@ function parseRequest(reqData) {
   } 
   
   
-  var url = new URL(reqPath, "scheme:/host"),
-      path = extractPath(url.pathname),
+  let url = new URL(reqPath, "scheme:/host"),
+      [pathname, _search] = reqPath.split('?'),
+      path = extractPath(pathname),
       query = extractQuery(url.searchParams),
       headers = extractHeaders(headerLines);
   
@@ -62,12 +71,7 @@ function parseRequest(reqData) {
   };
 }
 
-
-fs.readdirSync(suiteDir).forEach(function (subdir) {
-  if (subdir[0] === '.') return;
-  if (subdir === 'normalize-path') return;    // TODO: handle
-  if (subdir === 'post-sts-token') return;    // TODO: handle
-  
+function testAgainstData(suiteDir, subdir) {
   let basePath = path.join(suiteDir, subdir, subdir);
   
   let reqData = fs.readFileSync(`${basePath}.req`, 'utf8'),
@@ -76,19 +80,25 @@ fs.readdirSync(suiteDir).forEach(function (subdir) {
   
   function checkResult(label, our, tgt) {
     if (our !== tgt) {
-      console.log("\nMISMATCH\n");
-      console.warn(`tgt:\n${tgt}\n`);
-      console.warn(`our:\n${our}\n`);
+      console.warn(subdir, "FAIL", label);
+      console.info(`tgt:\n${tgt}\n`);
+      console.info(`our:\n${our}\n`);
       console.info(subdir, request);
       throw Error(`${label} does not match!`);
     } else {
-      console.log(label, "okay for", subdir);
+      console.log(subdir, "ok:", label);
     }
   }
   
   let ourCreq = plugin.canonicalRequest(request)[0],
       tgtCreq = fs.readFileSync(`${basePath}.creq`, 'utf8');
   checkResult("Canonical request", ourCreq, tgtCreq);
+  
+  if (
+    subdir === 'post-x-www-form-urlencoded' ||
+    subdir === 'post-x-www-form-urlencoded-parameters'
+  ) return;      // NOTE: these two now have a Content-Length field not accounted for in the .sts files…
+  // see e.g. https://github.com/mhart/aws4/blob/master/test/aws-sig-v4-test-suite/post-x-www-form-urlencoded/post-x-www-form-urlencoded.creq
   
   let ourSts = plugin.signRequest(request),
       tgtSts = fs.readFileSync(`${basePath}.sts`, 'utf8');
@@ -97,4 +107,22 @@ fs.readdirSync(suiteDir).forEach(function (subdir) {
   let ourAuth = request.headers['Authorization'],
       tgtAuth = fs.readFileSync(`${basePath}.authz`, 'utf8');
   checkResult("Authorization header", ourAuth, tgtAuth);
+}
+
+
+fs.readdirSync(suiteDir).forEach(function (subdir) {
+  if (subdir[0] === '.') return;
+  else if (
+    subdir === 'normalize-path' ||
+    subdir === 'post-sts-token'
+  ) {
+    var subSuiteDir = path.join(suiteDir, subdir);
+    fs.readdirSync(subSuiteDir).forEach(function (subdir) {
+      if (subdir[0] === '.') return;
+      else if (subdir.endsWith(".txt")) return;
+      else testAgainstData(subSuiteDir, subdir);
+    });
+  } else {
+    testAgainstData(suiteDir, subdir);
+  }
 });
