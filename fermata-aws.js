@@ -140,7 +140,7 @@ aws.canonicalRequest = function (req) {
         var v = req.headers[k];
         return [
             normalKey(k),
-            (v.join) ? v.map(normalVal).join(',') : normalVal(v)
+            v.split(',').map(normalVal).join(',')
         ];
     }).sort(function (a,b) {
         return cmp(a[0], b[0]);
