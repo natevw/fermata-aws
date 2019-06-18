@@ -88,17 +88,12 @@ aws.signRequest = function (req) {
     var signature = hmac(signingKey, stringToSign),
         credential = [apiKeyId, ...credScope].join('/'),
         authHeader = `${algorithm} Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
-console.log(signature);
     
     // TODO: `X-Amz-Security-Token` handling (see https://docs.aws.amazon.com/general/latest/gr/sigv4-add-signature-to-request.html)
     req.headers['Authorization'] = authHeader;
-    console.log(authHeader);
+    
+    return stringToSign;
 };
-
-aws.credentialScope = function (date, region, service) {
-    return [date, region, service, 'aws4_request'].join('/');
-};
-
 
 aws.canonicalRequest = function (req) {
     /* see https://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
